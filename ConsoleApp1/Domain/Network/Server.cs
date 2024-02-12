@@ -231,13 +231,13 @@ namespace ConsoleApp1.Domain.Network
 
         #region Event Invokers
 
-        protected virtual void OnClientConnected(Socket clientSocket, int id)
+        protected virtual void OnClientConnected(Socket clientSocket, Guid id)
         {
             var handler = ClientConnected;
             handler?.Invoke(id, new CustomEventArgs(clientSocket));
         }
 
-        protected virtual void OnClientDisconnected(Socket clientSocket, int id)
+        protected virtual void OnClientDisconnected(Socket clientSocket, Guid id)
         {
             var handler = ClientDisconnected;
             handler?.Invoke(id, new CustomEventArgs(clientSocket));

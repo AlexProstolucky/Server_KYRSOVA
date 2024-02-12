@@ -10,7 +10,6 @@
   <ItemGroup>
     <Folder Include="DataAccess\Contracts\" />
     <Folder Include="DataAccess\Impl\" />
-    <Folder Include="DataAccess\Utils\" />
     <Folder Include="Domain\ServisTransef\AudioСomm\" />
     <Folder Include="Domain\ServisTransef\ChatComm\" />
     <Folder Include="Domain\ServisTransef\FileSendComm\" />
@@ -22,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.1" />
     <PackageReference Include="System.Diagnostics.EventLog" Version="8.0.0" />
   </ItemGroup>
 
