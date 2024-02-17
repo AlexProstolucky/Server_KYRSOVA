@@ -237,7 +237,7 @@ namespace ConsoleApp1.Domain.Network
                     return;
                 }
 
-                var fileThread = new Thread(() => FileTool.SendFile("E:\\Курсова\\Server\\Server\\ConsoleApp1\\Domain\\ServisTransef\\FileSendComm\\FileBuff\\", 62000));
+                var fileThread = new Thread(() => FileTool.SendFile("..\\..\\..\\Domain\\ServisTransef\\FileSendComm\\FileBuff\\", 62000));
             }
 
             handlerSocket.BeginReceive(state.Buffer, 0, ChatHelper.StateObject.BUFFER_SIZE, 0,

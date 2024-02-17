@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ConsoleApp1.Domain.ServisTransef.FileSendComm.Utils
+﻿namespace ConsoleApp1.Domain.ServisTransef.FileSendComm.Utils
 {
     public class FileUtility
     {
-        public static string sourceDirectory = "E:\\Курсова\\Server\\Server\\ConsoleApp1\\Data\\Files\\";
-        public static string destinationDirectory = "E:\\Курсова\\Server\\Server\\ConsoleApp1\\Domain\\ServisTransef\\FileSendComm\\FileBuff\\";
+        public static string sourceDirectory = "..\\..\\..\\Data\\Files\\";
+        public static string destinationDirectory = "..\\..\\..\\Domain\\ServisTransef\\FileSendComm\\FileBuff\\";
         public static void CopyFileToDirectory(string fileName)
         {
             string sourceFilePath = Path.Combine(sourceDirectory, fileName);
