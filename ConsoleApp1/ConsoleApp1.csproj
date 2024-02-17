@@ -10,18 +10,19 @@
   <ItemGroup>
     <Folder Include="DataAccess\Contracts\" />
     <Folder Include="DataAccess\Impl\" />
+    <Folder Include="Data\Files\" />
     <Folder Include="Domain\ServisTransef\AudioСomm\" />
     <Folder Include="Domain\ServisTransef\ChatComm\" />
-    <Folder Include="Domain\ServisTransef\FileSendComm\" />
+    <Folder Include="Domain\ServisTransef\FileSendComm\FileBuff\" />
     <Folder Include="Domain\ServisTransef\SrceenShareComm\" />
     <Folder Include="Domain\ServisTransef\NotificationComm\" />
     <Folder Include="Domain\Utils\" />
     <Folder Include="Domain\UserProces\" />
-    <Folder Include="Data\" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Diagnostics.EventLog" Version="8.0.0" />
   </ItemGroup>
 

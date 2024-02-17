@@ -1,4 +1,5 @@
 ﻿using ConsoleApp1.DataAccess.Entities;
+using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text;
@@ -46,6 +47,7 @@ namespace ConsoleApp1.Domain.Network.Utils
         public static string WelcomeMessage = string.Format("{0}: ** Welcome to main chat room, Click on any user to start chat**\n", DateTime.Now.ToString("HH:mm:ss"));
         #endregion
 
+        public const int file_client_port = 63001;
         public class StateObject
         {
             // Client  socket.
@@ -75,8 +77,6 @@ namespace ConsoleApp1.Domain.Network.Utils
     /// </summary>
     internal class Data
     {
-        public const int MaxStringLength = 256;
-
         public Command Command { get; set; }
         public string From { get; set; }
         public string To { get; set; }
@@ -94,46 +94,29 @@ namespace ConsoleApp1.Domain.Network.Utils
 
         public byte[] ToBytes()
         {
-            byte[] commandBytes = BitConverter.GetBytes((int)Command);
-            byte[] fromBytes = Encoding.UTF8.GetBytes(From.PadRight(MaxStringLength));
-            byte[] toBytes = Encoding.UTF8.GetBytes(To.PadRight(MaxStringLength));
-            byte[] clientAddressBytes = Encoding.UTF8.GetBytes(ClientAddress.PadRight(MaxStringLength));
-            byte[] messageBytes = Encoding.UTF8.GetBytes(Message.PadRight(MaxStringLength).Substring(0, Math.Min(Message.Length, 10)));
-
-            int totalLength = commandBytes.Length + fromBytes.Length + toBytes.Length + clientAddressBytes.Length + messageBytes.Length;
-
-            byte[] dataBytes = new byte[totalLength];
-
-            int offset = 0;
-            Array.Copy(commandBytes, 0, dataBytes, offset, commandBytes.Length);
-            offset += commandBytes.Length;
-            Array.Copy(fromBytes, 0, dataBytes, offset, fromBytes.Length);
-            offset += fromBytes.Length;
-            Array.Copy(toBytes, 0, dataBytes, offset, toBytes.Length);
-            offset += toBytes.Length;
-            Array.Copy(clientAddressBytes, 0, dataBytes, offset, clientAddressBytes.Length);
-            offset += clientAddressBytes.Length;
-            Array.Copy(messageBytes, 0, dataBytes, offset, messageBytes.Length);
-
-            return dataBytes;
+            string json = JsonConvert.SerializeObject(this);
+            return System.Text.Encoding.UTF8.GetBytes(json);
         }
 
-        public static Data GetBytes(byte[] bytes)
+        public static Data GetBytes(byte[] dataBytes)
         {
-            Command command = (Command)BitConverter.ToInt32(bytes, 0);
-            string from = Encoding.UTF8.GetString(bytes, sizeof(int), MaxStringLength).Trim();
-            string to = Encoding.UTF8.GetString(bytes, sizeof(int) + MaxStringLength, MaxStringLength).Trim();
-            string clientAddress = Encoding.UTF8.GetString(bytes, sizeof(int) + MaxStringLength * 2, MaxStringLength).Trim();
-            string message = Encoding.UTF8.GetString(bytes, sizeof(int) + MaxStringLength * 3, Math.Min(MaxStringLength, bytes.Length - sizeof(int) - MaxStringLength * 3)).Trim();
-
-            return new Data(command, from, to, clientAddress, message);
+            string json = System.Text.Encoding.UTF8.GetString(dataBytes);
+            return JsonConvert.DeserializeObject<Data>(json);
         }
 
+        public override string ToString()
+        {
+            return $"Command: {Command}, From: {From}, To: {To}, Client Address: {ClientAddress}, Message: {Message}";
+        }
     }
 
-    // Команди які обробляє сервер
+    // Команди які обробляє сервер і клієнт
     public enum Command
     {
+        Good_Auth, // Успішний вхід
+        Bad_Auth, // Вхід пішов по пизді
+        Good_Reg, // Успішна реєстрація
+        Bad_Reg, // Реєстрація пішла по пизді
         Accept_Port, // Прийняти порт
         Accept_File, // Cервер отримує файл, і клієнта, якому цей файл надіслати, але надсилає тільки відомісті, а саме назву і розширення
         Send_File, // Запит клієнта на завантаження файла, який є в нього в доступі(інфа)

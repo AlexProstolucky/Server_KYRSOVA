@@ -32,32 +32,31 @@ public class ApplicationContext : DbContext
     public async Task<User> GeUserByIdAsync(Guid id)
     {
 
-        return await Users.Where(u => u.Id == id).Include(u => u.Friends).FirstOrDefaultAsync();
+        return await Users.Where(u => u.Id == id).FirstOrDefaultAsync();
     }
     public User GeUserById(Guid id)
     {
 
-        return Users.Where(u => u.Id == id).Include(u => u.Friends).FirstOrDefault();
+        return Users.Where(u => u.Id == id).FirstOrDefault();
     }
     public async Task<User> GeUserByEmailAsync(string email)
     {
 
-        return await Users.Where(u => u.Email == email).Include(u => u.Friends).FirstOrDefaultAsync();
+        return await Users.Where(u => u.Email == email).FirstOrDefaultAsync();
     }
     public User GeUserByIEmail(string email)
     {
-
-        return Users.Where(u => u.Email == email).Include(u => u.Friends).FirstOrDefault();
+        return Users.Where(u => u.Email == email).FirstOrDefault();
     }
     public async Task<User> GeUserByLoginAsync(string login)
     {
 
-        return await Users.Where(u => u.Login == login).Include(u => u.Friends).FirstOrDefaultAsync();
+        return await Users.Where(u => u.Login == login).FirstOrDefaultAsync();
     }
     public User GeUserByLogin(string login)
     {
 
-        return Users.Where(u => u.Login == login).Include(u => u.Friends).FirstOrDefault();
+        return Users.Where(u => u.Login == login).FirstOrDefault();
     }
     public bool IsLogged(User user)
     {
@@ -67,9 +66,9 @@ public class ApplicationContext : DbContext
     {
         return await Users.Where(u => u.Equals(user)).AnyAsync();
     }
-    public bool IsLogged(string login, string password)
+    public bool IsLogged(string email, string password)
     {
-        return Users.Where(u => u.Login.Equals(login) && u.Password.Equals(password)).Any();
+        return Users.Where(u => u.Email.Equals(email) && u.Password.Equals(password)).Any();
     }
     public async Task<bool> IsLoggedAsync(string login, string password)
     {

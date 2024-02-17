@@ -1,4 +1,8 @@
-﻿using ConsoleApp1.Domain.Network.Utils;
+﻿using Client.Services.FileSend.Utils;
+using ConsoleApp1.DataAccess.Entities;
+using ConsoleApp1.DataAccess.Utils;
+using ConsoleApp1.Domain.Network.Utils;
+using ConsoleApp1.Domain.ServisTransef.FileSendComm.Utils;
 using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -16,6 +20,7 @@ namespace ConsoleApp1.Domain.Network
         private readonly NetworkInterface networkInterface;
         private readonly string serverName;
         private readonly List<ConnectedClient> clients = new List<ConnectedClient>();
+        private ApplicationContext AppContext = new();
         public event EventHandler ClientConnected;
         public event EventHandler ClientDisconnected;
         #endregion
@@ -115,6 +120,7 @@ namespace ConsoleApp1.Domain.Network
         /// <param name="e"></param>
         public void ClientAdded(object sender, EventArgs e)
         {
+            Console.WriteLine("CLIENT CONNECTED");
             var socket = ((CustomEventArgs)e).ClientSocket;
             var bytes = new byte[10240];
             var bytesRead = socket.Receive(bytes);
@@ -123,31 +129,49 @@ namespace ConsoleApp1.Domain.Network
 
             if (data.Command == Command.Auth)
             {
-                // TODO метод входу в систему та синхронізація даних(яких нада буде)
+                string email;
+                string password;
+                string[] parts = data.Message.Split(' ');
+                email = parts[0];
+                password = parts[1];
+                if (AppContext.IsLogged(email, password))
+                {
+                    var client = AppContext.GeUserByIEmail(email);
+                    clients.Add(new ConnectedClient(client, socket));
+                    OnClientConnected(socket, client.Id);
+                    socket.Send(new Data(Command.Good_Auth, "Server", data.From, "", "").ToBytes());
+
+                    var state = new ChatHelper.StateObject
+                    {
+                        WorkSocket = socket
+                    };
+
+                    socket.BeginReceive(state.Buffer, 0, ChatHelper.StateObject.BUFFER_SIZE, 0,
+                    OnReceive, state);
+
+                    ChatHelper.WriteToEventLog(Log.ClientConnected, EventLogEntryType.Information);
+                    return;
+                }
+                else
+                {
+                    socket.Send(new Data(Command.Bad_Auth, "Server", data.From, "", "").ToBytes());
+                    return;
+                }
             }
             else if (data.Command == Command.Reg)
             {
-                // TODO метод реєстрації в систему та синхронізація даних(яких нада буде)
+                try
+                {
+                    string[] fields = data.Message.Split(' ');
+                    User user = new(Guid.NewGuid(), fields[0], fields[1], fields[2], fields[3], DateTime.Parse(fields[4]));
+                    AppContext.AddUser(user);
+                    socket.Send(new Data(Command.Good_Reg, "Server", data.From, "", "").ToBytes());
+                }
+                catch (Exception ex)
+                {
+                    socket.Send(new Data(Command.Bad_Reg, "Server", data.From, "", ex.Message).ToBytes());
+                }
             }
-
-            // Всунути в іфи та доробити
-            //var newClient = new ConnectedClient(newUserName, socket);
-            //clients.Add(newClient);
-
-            //OnClientConnected(socket, 1);
-
-            //foreach (var client in clients)
-            //    SendUsersList(client.Connection, client.UserName, newUserName, ChatHelper.CONNECTED);
-
-            var state = new ChatHelper.StateObject
-            {
-                WorkSocket = socket
-            };
-
-            socket.BeginReceive(state.Buffer, 0, ChatHelper.StateObject.BUFFER_SIZE, 0,
-            OnReceive, state);
-
-            ChatHelper.WriteToEventLog(Log.ClientConnected, EventLogEntryType.Information);
         }
 
         public void OnReceive(IAsyncResult ar)
@@ -181,6 +205,7 @@ namespace ConsoleApp1.Domain.Network
         /// <param name="handlerSocket"></param>
         private void ParseRequest(ChatHelper.StateObject state, Socket handlerSocket)
         {
+            Console.WriteLine("Start parse");
             var data = Data.GetBytes(state.Buffer);
             if (data.Command == Command.Disconnect)
             {
@@ -189,13 +214,31 @@ namespace ConsoleApp1.Domain.Network
             }
             else if (data.Command == Command.Accept_File)
             {
-
+                Console.WriteLine("Transfer file to server");
+                var fileThread = new Thread(() => FileTool.ReceiverFile(data.ClientAddress, ChatHelper.file_client_port, data.Message));
+                Thread.Sleep(1500);
+                Console.WriteLine("Start transfer file");
+                fileThread.Start();
+                var client = clients.FirstOrDefault(cl => cl.user.Id.ToString() == data.To);
+                if (client == null)
+                    return;
+                client.Connection.Send(data.ToBytes());
             }
-            //var clientStr = clients.FirstOrDefault(cl => cl.UserName == data.To);
-            //if (clientStr == null)
-            //    return;
-            //clientStr.Connection.Send(data.ToBytes());
+            else if (data.Command == Command.Send_File)
+            {
+                Console.WriteLine($"Transfer file to user {data.From}");
+                try
+                {
+                    FileUtility.CopyFileToDirectory(data.Message);
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine("File not exist");
+                    return;
+                }
 
+                var fileThread = new Thread(() => FileTool.SendFile("E:\\Курсова\\Server\\Server\\ConsoleApp1\\Domain\\ServisTransef\\FileSendComm\\FileBuff\\", 62000));
+            }
 
             handlerSocket.BeginReceive(state.Buffer, 0, ChatHelper.StateObject.BUFFER_SIZE, 0,
               OnReceive, state);
