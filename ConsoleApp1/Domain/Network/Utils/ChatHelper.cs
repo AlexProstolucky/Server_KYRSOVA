@@ -132,8 +132,6 @@ namespace ConsoleApp1.Domain.Network.Utils
         Null,
     }
 
-
-
     public class ConnectedClient
     {
         public User user;

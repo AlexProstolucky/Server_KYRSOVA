@@ -44,9 +44,6 @@ namespace ConsoleApp1.Domain.Network
             mainThread = new Thread(StartListen);
             mainThread.Start();
         }
-        /// <summary>
-        /// Server listens to specified port and accepts connection from client
-        /// </summary>
         public void StartListen()
         {
             try
@@ -93,9 +90,6 @@ namespace ConsoleApp1.Domain.Network
             return IPAddress.None;
         }
 
-        /// <summary>
-        /// Method to stop TCP communication
-        /// </summary>
         public void StopServer()
         {
             isRunning = false;
@@ -113,11 +107,6 @@ namespace ConsoleApp1.Domain.Network
             ClientAdded(this, new CustomEventArgs((Socket)obj));
         }
 
-        /// <summary>
-        /// When new client is added
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
         public void ClientAdded(object sender, EventArgs e)
         {
             Console.WriteLine("CLIENT CONNECTED");
@@ -197,12 +186,6 @@ namespace ConsoleApp1.Domain.Network
                 DisconnectClient(handler);
             }
         }
-
-        /// <summary>
-        /// Parse client request
-        /// </summary>
-        /// <param name="state"></param>
-        /// <param name="handlerSocket"></param>
         private void ParseRequest(ChatHelper.StateObject state, Socket handlerSocket)
         {
             Console.WriteLine("Start parse");
@@ -226,28 +209,32 @@ namespace ConsoleApp1.Domain.Network
             }
             else if (data.Command == Command.Send_File)
             {
+                string[] parts = data.Message.Split(' ');
+                string filename = parts[0];
+                int port = int.Parse(parts[1]);
                 Console.WriteLine($"Transfer file to user {data.From}");
                 try
                 {
-                    FileUtility.CopyFileToDirectory(data.Message);
+                    FileUtility.CopyFileToDirectory(filename);
                 }
                 catch (Exception)
                 {
                     Console.WriteLine("File not exist");
                     return;
                 }
-
-                var fileThread = new Thread(() => FileTool.SendFile("..\\..\\..\\Domain\\ServisTransef\\FileSendComm\\FileBuff\\", 62000));
+                var fileThread = new Thread(() => FileTool.SendFile("..\\..\\..\\Domain\\ServisTransef\\FileSendComm\\FileBuff", port));
+                fileThread.Start();
+                Console.WriteLine("Start transfer file");
+            }
+            else if (data.Command == Command.Accept_Port)
+            {
+                handlerSocket.Send(new Data(Command.Accept_Port, "Server", data.From, "", PortUtility.GetAvailablePort().ToString()).ToBytes());
             }
 
             handlerSocket.BeginReceive(state.Buffer, 0, ChatHelper.StateObject.BUFFER_SIZE, 0,
               OnReceive, state);
         }
 
-        /// <summary>
-        /// Disconnect connected  TCP client
-        /// </summary>
-        /// <param name="clientSocket"></param>
         public void DisconnectClient(Socket clientSocket)
         {
             var clientStr = clients.FirstOrDefault(k => k.Connection == clientSocket);
@@ -288,9 +275,6 @@ namespace ConsoleApp1.Domain.Network
 
         #endregion
     }
-    /// <summary>
-    /// Used to store custom network interface description
-    /// </summary>
     public class NetworkInterfaceDescription
     {
         public string Description { get; set; }

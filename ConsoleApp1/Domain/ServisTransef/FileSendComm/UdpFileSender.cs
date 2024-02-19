@@ -1,16 +1,16 @@
-﻿using System.Diagnostics;
+﻿using Client.Services.FileSend.Utils;
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
-using Client.Services.FileSend.Utils;
 
 namespace UDP_SENDER_FILE_TEST
 {
     public class UdpFileSender
     {
         #region Statics
-        public static readonly UInt32 MaxBlockSize = 8 * 1024;   // 8KB
+        public static readonly UInt32 MaxBlockSize = 63 * 1024;   // 8KB
         #endregion 
 
         enum SenderState
