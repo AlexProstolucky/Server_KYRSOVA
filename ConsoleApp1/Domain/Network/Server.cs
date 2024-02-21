@@ -52,7 +52,7 @@ namespace ConsoleApp1.Domain.Network
                 //? GetInterfaceIpAddress()
                 //: IPAddress.Any;
 
-                var ip = IPAddress.Parse("127.0.0.1");
+                var ip = IPAddress.Parse("26.144.152.222");
 
                 tcpServer = new TcpListener(ip, portNumber);
                 tcpServer.Start();
@@ -151,8 +151,9 @@ namespace ConsoleApp1.Domain.Network
             {
                 try
                 {
+                    // TODO DATATIME.PARSE
                     string[] fields = data.Message.Split(' ');
-                    User user = new(Guid.NewGuid(), fields[0], fields[1], fields[2], fields[3], DateTime.Parse(fields[4]));
+                    User user = new(Guid.NewGuid(), fields[0], fields[1], fields[2], fields[3], DateTime.Now);
                     AppContext.AddUser(user);
                     socket.Send(new Data(Command.Good_Reg, "Server", data.From, "", "").ToBytes());
                 }
@@ -229,6 +230,47 @@ namespace ConsoleApp1.Domain.Network
             else if (data.Command == Command.Accept_Port)
             {
                 handlerSocket.Send(new Data(Command.Accept_Port, "Server", data.From, "", PortUtility.GetAvailablePort().ToString()).ToBytes());
+            }
+            else if (data.Command == Command.Request_Call)
+            {
+                try
+                {
+                    var secondCallMember = clients.Where(u => u.user.Id.ToString() == data.To).FirstOrDefault();
+                    if (secondCallMember == null)
+                    {
+                        handlerSocket.Send(new Data(Command.Cancel_Call, "Server", data.From, "", "").ToBytes());
+                        return;
+                    }
+                    secondCallMember.Connection.Send(data.ToBytes());
+                }
+                catch (Exception ex)
+                {
+                    handlerSocket.Send(new Data(Command.Cancel_Call, "Server", data.From, "", ex.Message).ToBytes());
+                }
+            }
+            else if (data.Command == Command.Accept_Call)
+            {
+                try
+                {
+                    var firstCallMember = clients.Where(u => u.user.Id.ToString() == data.To).FirstOrDefault();
+                    if (firstCallMember == null)
+                    {
+                        handlerSocket.Send(new Data(Command.Cancel_Call, "Server", data.From, "", "").ToBytes());
+                        return;
+                    }
+                    firstCallMember.Connection.Send(data.ToBytes());
+
+                }
+                catch (Exception ex)
+                {
+                    handlerSocket.Send(new Data(Command.Cancel_Call, "Server", data.From, "", ex.Message).ToBytes());
+                }
+            }
+            else if (data.Command == Command.Cancel_Call)
+            {
+                var firstCallMember = clients.Where(u => u.user.Id.ToString() == data.To).FirstOrDefault();
+                firstCallMember.Connection.Send(new Data(Command.Cancel_Call, data.From, data.To, data.ClientAddress, "").ToBytes());
+
             }
 
             handlerSocket.BeginReceive(state.Buffer, 0, ChatHelper.StateObject.BUFFER_SIZE, 0,
