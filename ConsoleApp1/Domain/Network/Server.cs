@@ -48,12 +48,8 @@ namespace ConsoleApp1.Domain.Network
         {
             try
             {
-                //var ip = (networkInterface != null)
-                //? GetInterfaceIpAddress()
-                //: IPAddress.Any;
-
-                var ip = IPAddress.Parse("26.144.152.222");
-
+                //var ip = GetInterfaceIpAddress();
+                var ip = IPAddress.Parse("127.0.0.1");
                 tcpServer = new TcpListener(ip, portNumber);
                 tcpServer.Start();
 
@@ -109,7 +105,7 @@ namespace ConsoleApp1.Domain.Network
 
         public void ClientAdded(object sender, EventArgs e)
         {
-            Console.WriteLine("CLIENT CONNECTED");
+            Console.WriteLine("Client connected");
             var socket = ((CustomEventArgs)e).ClientSocket;
             var bytes = new byte[10240];
             var bytesRead = socket.Receive(bytes);
@@ -128,7 +124,22 @@ namespace ConsoleApp1.Domain.Network
                     var client = AppContext.GeUserByIEmail(email);
                     clients.Add(new ConnectedClient(client, socket));
                     OnClientConnected(socket, client.Id);
-                    socket.Send(new Data(Command.Good_Auth, "Server", data.From, "", "").ToBytes());
+                    if (client.Friends.Count == 0)
+                    {
+                        socket.Send(new Data(Command.Good_Auth, "Server", data.From, "", client.Id.ToString() + " "
+                            + client.Nickname + " " + client.Friends.Count.ToString()).ToBytes());
+                    }
+                    else
+                    {
+                        string rez = string.Empty;
+                        foreach (var friend in client.Friends)
+                        {
+                            var buff = AppContext.GeUserById(friend);
+                            rez += friend.ToString() + " " + buff.Nickname + " ";
+                        }
+                        socket.Send(new Data(Command.Good_Auth, "Server", data.From, "", client.Id.ToString() + " "
+                            + client.Nickname + " " + client.Friends.Count.ToString() + " " + rez).ToBytes());
+                    }
 
                     var state = new ChatHelper.StateObject
                     {
@@ -189,7 +200,7 @@ namespace ConsoleApp1.Domain.Network
         }
         private void ParseRequest(ChatHelper.StateObject state, Socket handlerSocket)
         {
-            Console.WriteLine("Start parse");
+            Console.WriteLine("Start parse request");
             var data = Data.GetBytes(state.Buffer);
             if (data.Command == Command.Disconnect)
             {
@@ -198,7 +209,7 @@ namespace ConsoleApp1.Domain.Network
             }
             else if (data.Command == Command.Accept_File)
             {
-                Console.WriteLine("Transfer file to server");
+                Console.WriteLine($"Transfer file to server from {data.From}");
                 var fileThread = new Thread(() => FileTool.ReceiverFile(data.ClientAddress, ChatHelper.file_client_port, data.Message));
                 Thread.Sleep(1500);
                 Console.WriteLine("Start transfer file");
@@ -238,7 +249,7 @@ namespace ConsoleApp1.Domain.Network
                     var secondCallMember = clients.Where(u => u.user.Id.ToString() == data.To).FirstOrDefault();
                     if (secondCallMember == null)
                     {
-                        handlerSocket.Send(new Data(Command.Cancel_Call, "Server", data.From, "", "").ToBytes());
+                        handlerSocket.Send(new Data(Command.UserNotConnected, "Server", data.From, "", "").ToBytes());
                         return;
                     }
                     secondCallMember.Connection.Send(data.ToBytes());
@@ -255,7 +266,7 @@ namespace ConsoleApp1.Domain.Network
                     var firstCallMember = clients.Where(u => u.user.Id.ToString() == data.To).FirstOrDefault();
                     if (firstCallMember == null)
                     {
-                        handlerSocket.Send(new Data(Command.Cancel_Call, "Server", data.From, "", "").ToBytes());
+                        handlerSocket.Send(new Data(Command.UserNotConnected, "Server", data.From, "", "").ToBytes());
                         return;
                     }
                     firstCallMember.Connection.Send(data.ToBytes());
@@ -269,8 +280,20 @@ namespace ConsoleApp1.Domain.Network
             else if (data.Command == Command.Cancel_Call)
             {
                 var firstCallMember = clients.Where(u => u.user.Id.ToString() == data.To).FirstOrDefault();
-                firstCallMember.Connection.Send(new Data(Command.Cancel_Call, data.From, data.To, data.ClientAddress, "").ToBytes());
+                if (firstCallMember != null)
+                {
+                    firstCallMember.Connection.Send(new Data(Command.Cancel_Call, data.From, data.To, data.ClientAddress, "").ToBytes());
+                }
 
+            }
+            else if (data.Command == Command.Send_Message)
+            {
+                var user = clients.Where(u => u.user.Id.ToString() == data.To).FirstOrDefault();
+                if (user != null)
+                {
+                    user.Connection.Send(data.ToBytes());
+                }
+                else handlerSocket.Send(new Data(Command.UserNotConnected, "Server", data.To, data.ClientAddress, "").ToBytes());
             }
 
             handlerSocket.BeginReceive(state.Buffer, 0, ChatHelper.StateObject.BUFFER_SIZE, 0,

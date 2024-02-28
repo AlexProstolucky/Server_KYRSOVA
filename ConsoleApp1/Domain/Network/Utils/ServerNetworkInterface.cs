@@ -7,17 +7,12 @@ namespace ConsoleApp1.Domain.Network.Utils
         public ServerNetworkInterface() { }
         public static NetworkInterface GetServerNetworkInterface()
         {
-            NetworkInterface[] networkInterfaces = NetworkInterface.GetAllNetworkInterfaces();
+            NetworkInterface[] interfaces = NetworkInterface.GetAllNetworkInterfaces();
 
-            foreach (NetworkInterface networkInterface in networkInterfaces)
-            {
-                if (networkInterface.Name == "Radmin VPN")
-                {
-                    return networkInterface;
-                }
-            }
+            NetworkInterface radminVPNInterface = interfaces.FirstOrDefault(
+                iface => iface.Name.Equals("Radmin VPN", StringComparison.OrdinalIgnoreCase));
 
-            return networkInterfaces[0];
+            return radminVPNInterface;
         }
     }
 }
