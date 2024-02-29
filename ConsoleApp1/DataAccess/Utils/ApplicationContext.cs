@@ -140,4 +140,32 @@ public class ApplicationContext : DbContext
         await SaveChangesAsync();
         return true;
     }
+
+    public void MakeFriends(Guid firstUserGuid, Guid secondUserGuid)
+    {
+        var firstUser = Users.Where(u => u.Id == firstUserGuid).FirstOrDefault();
+        var SecondUser = Users.Where(u => u.Id == secondUserGuid).FirstOrDefault();
+
+        if (firstUser != null && SecondUser != null)
+        {
+            firstUser.Friends.Add(secondUserGuid);
+            SecondUser.Friends.Add(firstUserGuid);
+            SaveChanges();
+        }
+
+    }
+    public async void MakeFriendsAsync(Guid firstUserGuid, Guid secondUserGuid)
+    {
+        var firstUser = await Users.Where(u => u.Id == firstUserGuid).FirstOrDefaultAsync();
+        var SecondUser = await Users.Where(u => u.Id == secondUserGuid).FirstOrDefaultAsync();
+
+        if (firstUser != null && SecondUser != null)
+        {
+            firstUser.Friends.Add(secondUserGuid);
+            SecondUser.Friends.Add(firstUserGuid);
+            await SaveChangesAsync();
+        }
+
+    }
+
 }

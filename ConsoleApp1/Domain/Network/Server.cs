@@ -295,6 +295,41 @@ namespace ConsoleApp1.Domain.Network
                 }
                 else handlerSocket.Send(new Data(Command.UserNotConnected, "Server", data.To, data.ClientAddress, "").ToBytes());
             }
+            else if (data.Command == Command.FriendRequest)
+            {
+                var secUserNetwork = clients.Where(u => u.user.Id.ToString() == data.To).FirstOrDefault();
+                var secUserDB = AppContext.Users.Where(u => u.Id.ToString() == data.To).FirstOrDefault();
+                if (secUserNetwork == null && secUserDB != null)
+                {
+                    secUserDB.FriendsRequests.Add(Guid.Parse(data.From));
+                }
+                else if (secUserNetwork != null && secUserDB != null)
+                {
+                    secUserNetwork.Connection.Send(new Data(Command.FriendRequest, data.From, data.To, data.ClientAddress, "").ToBytes());
+                    secUserDB.FriendsRequests.Add(Guid.Parse(data.From));
+                }
+                AppContext.SaveChanges();
+            }
+            else if (data.Command == Command.AcceptFriendRequest)
+            {
+                var firstUserDB = AppContext.Users.Where(u => u.Id.ToString() == data.From).FirstOrDefault();
+
+                var secUserDB = AppContext.Users.Where(u => u.Id.ToString() == data.To).FirstOrDefault();
+                if (firstUserDB != null && secUserDB != null)
+                    if (firstUserDB.FriendsRequests.Contains(Guid.Parse(data.To)))
+                    {
+                        var secUserNetwork = clients.Where(u => u.user.Id.ToString() == data.To).FirstOrDefault();
+                        firstUserDB.FriendsRequests.Remove(Guid.Parse(data.To));
+                        AppContext.MakeFriends(Guid.Parse(data.From), Guid.Parse(data.To));//вже є saveChanges
+                        if (secUserNetwork != null) secUserNetwork.Connection.Send(new Data(Command.NewFriend, data.From, data.To, data.ClientAddress, data.Message).ToBytes());
+                    }
+            }
+            else if (data.Command == Command.DeclineFriendRequest)
+            {
+                var firstUserDB = AppContext.Users.Where(u => u.Id.ToString() == data.From).FirstOrDefault();
+                if (firstUserDB != null && firstUserDB.FriendsRequests.Contains(Guid.Parse(data.To))) firstUserDB.FriendsRequests.Remove(Guid.Parse(data.To));
+                AppContext.SaveChanges();
+            }
 
             handlerSocket.BeginReceive(state.Buffer, 0, ChatHelper.StateObject.BUFFER_SIZE, 0,
               OnReceive, state);
