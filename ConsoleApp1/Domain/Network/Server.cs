@@ -124,21 +124,36 @@ namespace ConsoleApp1.Domain.Network
                     var client = AppContext.GeUserByIEmail(email);
                     clients.Add(new ConnectedClient(client, socket));
                     OnClientConnected(socket, client.Id);
-                    if (client.Friends.Count == 0)
+                    if (client.Friends.Count == 0 && client.FriendsRequests.Count == 0)
                     {
                         socket.Send(new Data(Command.Good_Auth, "Server", data.From, "", client.Id.ToString() + " "
-                            + client.Nickname + " " + client.Friends.Count.ToString()).ToBytes());
+                            + client.Nickname + " " + client.Friends.Count.ToString() + " " + client.FriendsRequests.Count.ToString()).ToBytes());
                     }
                     else
                     {
-                        string rez = string.Empty;
-                        foreach (var friend in client.Friends)
+                        string rez_friends = string.Empty;
+                        string rez_req = string.Empty;
+                        if (client.Friends.Count > 0)
                         {
-                            var buff = AppContext.GeUserById(friend);
-                            rez += friend.ToString() + " " + buff.Nickname + " ";
+                            foreach (var friend in client.Friends)
+                            {
+                                var buff = AppContext.GeUserById(friend);
+                                rez_friends += friend.ToString() + " " + buff.Nickname + " ";
+                            }
+                            rez_friends = rez_friends.TrimEnd();
+                        }
+                        if (client.FriendsRequests.Count > 0)
+                        {
+                            foreach (var req in client.FriendsRequests)
+                            {
+                                var buff = AppContext.GeUserById(req);
+                                rez_req += req.ToString() + " " + buff.Nickname + " ";
+                            }
+                            rez_req = rez_req.TrimEnd();
                         }
                         socket.Send(new Data(Command.Good_Auth, "Server", data.From, "", client.Id.ToString() + " "
-                            + client.Nickname + " " + client.Friends.Count.ToString() + " " + rez).ToBytes());
+                            + client.Nickname + " " + client.Friends.Count.ToString() + " " + rez_friends + " "
+                            + client.FriendsRequests.Count.ToString() + " " + rez_req).ToBytes());
                     }
 
                     var state = new ChatHelper.StateObject
