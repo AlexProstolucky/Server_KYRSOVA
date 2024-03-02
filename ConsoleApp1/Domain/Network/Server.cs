@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using static ConsoleApp1.Domain.Network.Utils.ChatHelper;
 
 namespace ConsoleApp1.Domain.Network
 {
@@ -48,8 +49,8 @@ namespace ConsoleApp1.Domain.Network
         {
             try
             {
-                //var ip = GetInterfaceIpAddress();
-                var ip = IPAddress.Parse("127.0.0.1");
+                var ip = GetInterfaceIpAddress();
+                //var ip = IPAddress.Parse("127.0.0.1");
                 tcpServer = new TcpListener(ip, portNumber);
                 tcpServer.Start();
 
@@ -170,6 +171,7 @@ namespace ConsoleApp1.Domain.Network
                 else
                 {
                     socket.Send(new Data(Command.Bad_Auth, "Server", data.From, "", "").ToBytes());
+                    socket.Close();
                     return;
                 }
             }
@@ -177,15 +179,16 @@ namespace ConsoleApp1.Domain.Network
             {
                 try
                 {
-                    // TODO DATATIME.PARSE
                     string[] fields = data.Message.Split(' ');
                     User user = new(Guid.NewGuid(), fields[0], fields[1], fields[2], fields[3], DateTime.Now);
                     AppContext.AddUser(user);
                     socket.Send(new Data(Command.Good_Reg, "Server", data.From, "", "").ToBytes());
+                    socket.Close();
                 }
                 catch (Exception ex)
                 {
                     socket.Send(new Data(Command.Bad_Reg, "Server", data.From, "", ex.Message).ToBytes());
+                    socket.Close();
                 }
             }
         }
@@ -220,6 +223,11 @@ namespace ConsoleApp1.Domain.Network
             if (data.Command == Command.Disconnect)
             {
                 DisconnectClient(state.WorkSocket);
+                return;
+            }
+            else if (data.Command == Command.CloseConnection)
+            {
+                CloseConnectionClient(state.WorkSocket);
                 return;
             }
             else if (data.Command == Command.Accept_File)
@@ -308,28 +316,39 @@ namespace ConsoleApp1.Domain.Network
                 {
                     user.Connection.Send(data.ToBytes());
                 }
-                else handlerSocket.Send(new Data(Command.UserNotConnected, "Server", data.To, data.ClientAddress, "").ToBytes());
+                else
+                {
+                    data.Command = Command.UserNotConnected;
+                    handlerSocket.Send(data.ToBytes());
+                }
             }
             else if (data.Command == Command.FriendRequest)
             {
                 var secUserNetwork = clients.Where(u => u.user.Id.ToString() == data.To).FirstOrDefault();
-                var secUserDB = AppContext.Users.Where(u => u.Id.ToString() == data.To).FirstOrDefault();
-                if (secUserNetwork == null && secUserDB != null)
+                var secUserDB = AppContext.Users.Where(u => u.Id.ToString() == data.To.ToUpper()).FirstOrDefault();
+                if (secUserDB != null)
                 {
-                    secUserDB.FriendsRequests.Add(Guid.Parse(data.From));
+                    if (secUserNetwork == null && secUserDB != null)
+                    {
+                        secUserDB.FriendsRequests.Add(Guid.Parse(data.From));
+                    }
+                    else if (secUserNetwork != null && secUserDB != null)
+                    {
+                        secUserNetwork.Connection.Send(new Data(Command.FriendRequest, data.From, data.To, data.ClientAddress, "").ToBytes());
+                        secUserDB.FriendsRequests.Add(Guid.Parse(data.From));
+                    }
+                    AppContext.SaveChanges();
                 }
-                else if (secUserNetwork != null && secUserDB != null)
+                else
                 {
-                    secUserNetwork.Connection.Send(new Data(Command.FriendRequest, data.From, data.To, data.ClientAddress, "").ToBytes());
-                    secUserDB.FriendsRequests.Add(Guid.Parse(data.From));
+                    handlerSocket.Send(new Data(Command.FriendRequestFailed, "Server", data.From, "", data.To).ToBytes());
                 }
-                AppContext.SaveChanges();
             }
             else if (data.Command == Command.AcceptFriendRequest)
             {
-                var firstUserDB = AppContext.Users.Where(u => u.Id.ToString() == data.From).FirstOrDefault();
+                var firstUserDB = AppContext.Users.Where(u => u.Id.ToString() == data.From.ToUpper()).FirstOrDefault();
 
-                var secUserDB = AppContext.Users.Where(u => u.Id.ToString() == data.To).FirstOrDefault();
+                var secUserDB = AppContext.Users.Where(u => u.Id.ToString() == data.To.ToUpper()).FirstOrDefault();
                 if (firstUserDB != null && secUserDB != null)
                     if (firstUserDB.FriendsRequests.Contains(Guid.Parse(data.To)))
                     {
@@ -345,13 +364,22 @@ namespace ConsoleApp1.Domain.Network
                 if (firstUserDB != null && firstUserDB.FriendsRequests.Contains(Guid.Parse(data.To))) firstUserDB.FriendsRequests.Remove(Guid.Parse(data.To));
                 AppContext.SaveChanges();
             }
-
+            state.Buffer = null;
+            state.Buffer = new byte[StateObject.BUFFER_SIZE];
+            GC.Collect();
             handlerSocket.BeginReceive(state.Buffer, 0, ChatHelper.StateObject.BUFFER_SIZE, 0,
               OnReceive, state);
         }
 
+        public void CloseConnectionClient(Socket clientSocket)
+        {
+            Console.WriteLine("Client Close Connection");
+
+            clientSocket.Close();
+        }
         public void DisconnectClient(Socket clientSocket)
         {
+            Console.WriteLine("Client Disconnected");
             var clientStr = clients.FirstOrDefault(k => k.Connection == clientSocket);
             if (clientStr == null)
                 return;
