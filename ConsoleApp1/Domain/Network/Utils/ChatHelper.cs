@@ -79,6 +79,10 @@ namespace ConsoleApp1.Domain.Network.Utils
         Good_Reg, // Успішна реєстрація
         Bad_Reg, // Реєстрація пішла по пизді
         Accept_Port, // Прийняти порт
+        TryAccept_File, // Питаємо сервер чи є клієнт на сервері щоб кинути файл
+        TryFileGood, // Відповідь на TryAccept_File
+        TryFileBad, // Відповідь на TryAccept_File
+        StopAccept_File, // Зупинення потоку при ексепшені
         Accept_File, // Cервер отримує файл, і клієнта, якому цей файл надіслати, але надсилає тільки відомісті, а саме назву і розширення
         Send_File, // Запит клієнта на завантаження файла, який є в нього в доступі(інфа)
         Send_Message, // Просте повідомлення

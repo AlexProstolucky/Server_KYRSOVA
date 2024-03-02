@@ -230,17 +230,34 @@ namespace ConsoleApp1.Domain.Network
                 CloseConnectionClient(state.WorkSocket);
                 return;
             }
+            else if (data.Command == Command.TryAccept_File)
+            {
+                var client = clients.FirstOrDefault(cl => cl.user.Id.ToString() == data.To);
+                if (client == null)
+                {
+                    handlerSocket.Send(new Data(Command.TryFileBad, "Server", data.From, "", data.To).ToBytes());
+                }
+                else
+                {
+                    handlerSocket.Send(new Data(Command.TryFileGood, data.From, data.To, "", data.Message).ToBytes());
+                }
+            }
             else if (data.Command == Command.Accept_File)
             {
                 Console.WriteLine($"Transfer file to server from {data.From}");
-                var fileThread = new Thread(() => FileTool.ReceiverFile(data.ClientAddress, ChatHelper.file_client_port, data.Message));
-                Thread.Sleep(1500);
-                Console.WriteLine("Start transfer file");
-                fileThread.Start();
                 var client = clients.FirstOrDefault(cl => cl.user.Id.ToString() == data.To);
                 if (client == null)
-                    return;
-                client.Connection.Send(data.ToBytes());
+                {
+                    handlerSocket.Send(new Data(Command.StopAccept_File, "Server", data.From, "", "").ToBytes());
+                }
+                else
+                {
+                    var fileThread = new Thread(() => FileTool.ReceiverFile(data.ClientAddress, ChatHelper.file_client_port, data.Message));
+                    Thread.Sleep(500);
+                    Console.WriteLine("Start transfer file");
+                    fileThread.Start();
+                    client.Connection.Send(data.ToBytes());
+                }
             }
             else if (data.Command == Command.Send_File)
             {
@@ -335,7 +352,7 @@ namespace ConsoleApp1.Domain.Network
                     }
                     else if (secUserNetwork != null && secUserDB != null)
                     {
-                        secUserNetwork.Connection.Send(new Data(Command.FriendRequest, data.From, data.To, data.ClientAddress, "").ToBytes());
+                        secUserNetwork.Connection.Send(new Data(Command.FriendRequest, data.From, data.To, data.ClientAddress, secUserDB.Nickname).ToBytes());
                         secUserDB.FriendsRequests.Add(Guid.Parse(data.From));
                         handlerSocket.Send(new Data(Command.FriendRequestGood, "Server", data.From, "", "").ToBytes());
                     }
@@ -352,13 +369,20 @@ namespace ConsoleApp1.Domain.Network
 
                 var secUserDB = AppContext.Users.Where(u => u.Id.ToString() == data.To.ToUpper()).FirstOrDefault();
                 if (firstUserDB != null && secUserDB != null)
+                {
                     if (firstUserDB.FriendsRequests.Contains(Guid.Parse(data.To)))
                     {
                         var secUserNetwork = clients.Where(u => u.user.Id.ToString() == data.To).FirstOrDefault();
                         firstUserDB.FriendsRequests.Remove(Guid.Parse(data.To));
                         AppContext.MakeFriends(Guid.Parse(data.From), Guid.Parse(data.To));//вже є saveChanges
-                        if (secUserNetwork != null) secUserNetwork.Connection.Send(new Data(Command.NewFriend, data.From, data.To, data.ClientAddress, data.Message).ToBytes());
+                        if (secUserNetwork != null)
+                        {
+                            secUserNetwork.Connection.Send(new Data(Command.NewFriend,
+                            data.From, data.To, data.ClientAddress, firstUserDB.Nickname).ToBytes());
+                        }
+                        handlerSocket.Send(new Data(Command.NewFriend, "Server", data.To, "", secUserDB.Nickname).ToBytes());
                     }
+                }
             }
             else if (data.Command == Command.DeclineFriendRequest)
             {
