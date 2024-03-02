@@ -326,16 +326,18 @@ namespace ConsoleApp1.Domain.Network
             {
                 var secUserNetwork = clients.Where(u => u.user.Id.ToString() == data.To).FirstOrDefault();
                 var secUserDB = AppContext.Users.Where(u => u.Id.ToString() == data.To.ToUpper()).FirstOrDefault();
-                if (secUserDB != null)
+                if (secUserDB != null && !secUserDB.FriendsRequests.Contains(Guid.Parse(data.From)))
                 {
                     if (secUserNetwork == null && secUserDB != null)
                     {
                         secUserDB.FriendsRequests.Add(Guid.Parse(data.From));
+                        handlerSocket.Send(new Data(Command.FriendRequestGood, "Server", data.From, "", "").ToBytes());
                     }
                     else if (secUserNetwork != null && secUserDB != null)
                     {
                         secUserNetwork.Connection.Send(new Data(Command.FriendRequest, data.From, data.To, data.ClientAddress, "").ToBytes());
                         secUserDB.FriendsRequests.Add(Guid.Parse(data.From));
+                        handlerSocket.Send(new Data(Command.FriendRequestGood, "Server", data.From, "", "").ToBytes());
                     }
                     AppContext.SaveChanges();
                 }
