@@ -87,6 +87,8 @@ namespace UDP_SENDER_FILE_TEST
                 if (isBye)
                 {
                     ResetTransferState();
+                    _client.Close();
+                    return;
                     Console.WriteLine("Received a BYE message, waiting for next client.");
                 }
                 switch (state)
@@ -181,6 +183,8 @@ namespace UDP_SENDER_FILE_TEST
             }
 
             state = SenderState.NotRunning;
+            _client.Close();
+            return;
         }
 
         public void Close()

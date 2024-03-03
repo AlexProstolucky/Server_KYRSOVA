@@ -253,7 +253,7 @@ namespace ConsoleApp1.Domain.Network
                 else
                 {
                     var fileThread = new Thread(() => FileTool.ReceiverFile(data.ClientAddress, ChatHelper.file_client_port, data.Message));
-                    Thread.Sleep(500);
+                    Thread.Sleep(1500);
                     Console.WriteLine("Start transfer file");
                     fileThread.Start();
                     client.Connection.Send(data.ToBytes());
@@ -277,6 +277,7 @@ namespace ConsoleApp1.Domain.Network
                 var fileThread = new Thread(() => FileTool.SendFile("..\\..\\..\\Domain\\ServisTransef\\FileSendComm\\FileBuff", port));
                 fileThread.Start();
                 Console.WriteLine("Start transfer file");
+                PortUtility.bookedPorts.Remove(port);
             }
             else if (data.Command == Command.Accept_Port)
             {
