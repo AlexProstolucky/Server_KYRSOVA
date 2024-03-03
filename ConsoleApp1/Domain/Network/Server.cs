@@ -125,29 +125,36 @@ namespace ConsoleApp1.Domain.Network
                     var client = AppContext.GeUserByIEmail(email);
                     clients.Add(new ConnectedClient(client, socket));
                     OnClientConnected(socket, client.Id);
-                    string rez_friends = string.Empty;
-                    string rez_req = string.Empty;
-                    if (client.Friends.Count > 0)
+                    var friendBuf = "";
+                    foreach (var i in client.Friends)
                     {
-                        foreach (var friend in client.Friends)
-                        {
-                            var buff = AppContext.GeUserById(friend);
-                            rez_friends += friend.ToString() + " " + buff.Nickname + " ";
-                        }
-                        rez_friends = rez_friends.TrimEnd();
+                        friendBuf += i.ToString();
+                        friendBuf += ",";
+                        var user = AppContext.GeUserById(i);
+                        friendBuf += user.Nickname;
+                        friendBuf += ",";
                     }
-                    if (client.FriendsRequests.Count > 0)
+                    if (friendBuf.Length > 0)
                     {
-                        foreach (var req in client.FriendsRequests)
-                        {
-                            var buff = AppContext.GeUserById(req);
-                            rez_req += req.ToString() + " " + buff.Nickname + " ";
-                        }
-                        rez_req = rez_req.TrimEnd();
+                        friendBuf = friendBuf.Remove(friendBuf.Length - 1);
                     }
-                    socket.Send(new Data(Command.Good_Auth, "Server", data.From, "", client.Id.ToString() + " "
-                        + client.Nickname + " " + client.Friends.Count.ToString() + " " + rez_friends + " "
-                        + client.FriendsRequests.Count.ToString() + " " + rez_req).ToBytes());
+
+
+                    var requestBuf = "";
+                    foreach (var i in client.FriendsRequests)
+                    {
+                        requestBuf += i.ToString();
+                        requestBuf += ",";
+                        var user = AppContext.GeUserById(i);
+                        requestBuf += user.Nickname;
+                        requestBuf += ",";
+                    }
+                    if (requestBuf.Length > 0)
+                    {
+                        requestBuf = requestBuf.Remove(requestBuf.Length - 1);
+                    }
+
+                    socket.Send(new Data(Command.Good_Auth, "Server", data.From, "", $"{client.Id};{client.Nickname};{friendBuf};{requestBuf}").ToBytes());
 
                     var state = new ChatHelper.StateObject
                     {
@@ -266,7 +273,7 @@ namespace ConsoleApp1.Domain.Network
                     Console.WriteLine("File not exist");
                     return;
                 }
-                var fileThread = new Thread(() => FileTool.SendFile("..\\..\\..\\Domain\\ServisTransef\\FileSendComm\\FileBuff", port));
+                var fileThread = new Thread(() => FileTool.SendFile("..\\..\\..\\Data\\Files", port));
                 fileThread.Start();
                 Console.WriteLine("Start transfer file");
                 PortUtility.bookedPorts.Remove(port);
@@ -344,6 +351,7 @@ namespace ConsoleApp1.Domain.Network
             {
                 var secUserNetwork = clients.Where(u => u.user.Id.ToString() == data.To).FirstOrDefault();
                 var secUserDB = AppContext.Users.Where(u => u.Id.ToString() == data.To.ToUpper()).FirstOrDefault();
+                var firstUserNetwork = clients.Where(u => u.user.Id.ToString() == data.From).FirstOrDefault();
                 if (secUserDB != null && !secUserDB.FriendsRequests.Contains(Guid.Parse(data.From)))
                 {
                     if (secUserNetwork == null && secUserDB != null)
@@ -353,7 +361,7 @@ namespace ConsoleApp1.Domain.Network
                     }
                     else if (secUserNetwork != null && secUserDB != null)
                     {
-                        secUserNetwork.Connection.Send(new Data(Command.FriendRequest, data.From, data.To, data.ClientAddress, secUserDB.Nickname).ToBytes());
+                        secUserNetwork.Connection.Send(new Data(Command.FriendRequest, data.To, data.From, data.ClientAddress, firstUserNetwork.user.Nickname).ToBytes());
                         secUserDB.FriendsRequests.Add(Guid.Parse(data.From));
                         handlerSocket.Send(new Data(Command.FriendRequestGood, "Server", data.From, "", "").ToBytes());
                     }
