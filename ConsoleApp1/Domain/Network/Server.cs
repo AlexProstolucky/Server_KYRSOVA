@@ -352,7 +352,7 @@ namespace ConsoleApp1.Domain.Network
                 var secUserNetwork = clients.Where(u => u.user.Id.ToString() == data.To).FirstOrDefault();
                 var secUserDB = AppContext.Users.Where(u => u.Id.ToString() == data.To.ToUpper()).FirstOrDefault();
                 var firstUserNetwork = clients.Where(u => u.user.Id.ToString() == data.From).FirstOrDefault();
-                if (secUserDB != null && !secUserDB.FriendsRequests.Contains(Guid.Parse(data.From)))
+                if (secUserDB != null && !secUserDB.FriendsRequests.Contains(Guid.Parse(data.From)) && !secUserDB.Friends.Contains(Guid.Parse(data.From)))
                 {
                     if (secUserNetwork == null && secUserDB != null)
                     {
@@ -387,15 +387,15 @@ namespace ConsoleApp1.Domain.Network
                         if (secUserNetwork != null)
                         {
                             secUserNetwork.Connection.Send(new Data(Command.NewFriend,
-                            data.From, data.To, data.ClientAddress, firstUserDB.Nickname).ToBytes());
+                            data.To, data.From, data.ClientAddress, firstUserDB.Nickname).ToBytes());
                         }
-                        handlerSocket.Send(new Data(Command.NewFriend, "Server", data.To, "", secUserDB.Nickname).ToBytes());
+                        handlerSocket.Send(new Data(Command.NewFriend, data.To, data.From, "", secUserDB.Nickname).ToBytes());
                     }
                 }
             }
             else if (data.Command == Command.DeclineFriendRequest)
             {
-                var firstUserDB = AppContext.Users.Where(u => u.Id.ToString() == data.From).FirstOrDefault();
+                var firstUserDB = AppContext.Users.Where(u => u.Id.ToString() == data.From.ToUpper()).FirstOrDefault();
                 if (firstUserDB != null && firstUserDB.FriendsRequests.Contains(Guid.Parse(data.To))) firstUserDB.FriendsRequests.Remove(Guid.Parse(data.To));
                 AppContext.SaveChanges();
             }
