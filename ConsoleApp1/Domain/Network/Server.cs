@@ -387,7 +387,7 @@ namespace ConsoleApp1.Domain.Network
                         if (secUserNetwork != null)
                         {
                             secUserNetwork.Connection.Send(new Data(Command.NewFriend,
-                            data.To, data.From, data.ClientAddress, firstUserDB.Nickname).ToBytes());
+                            data.From, data.To, data.ClientAddress, firstUserDB.Nickname).ToBytes());
                         }
                         handlerSocket.Send(new Data(Command.NewFriend, data.To, data.From, "", secUserDB.Nickname).ToBytes());
                     }
