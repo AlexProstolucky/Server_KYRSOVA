@@ -125,37 +125,29 @@ namespace ConsoleApp1.Domain.Network
                     var client = AppContext.GeUserByIEmail(email);
                     clients.Add(new ConnectedClient(client, socket));
                     OnClientConnected(socket, client.Id);
-                    if (client.Friends.Count == 0 && client.FriendsRequests.Count == 0)
+                    string rez_friends = string.Empty;
+                    string rez_req = string.Empty;
+                    if (client.Friends.Count > 0)
                     {
-                        socket.Send(new Data(Command.Good_Auth, "Server", data.From, "", client.Id.ToString() + " "
-                            + client.Nickname + " " + client.Friends.Count.ToString() + " " + client.FriendsRequests.Count.ToString()).ToBytes());
+                        foreach (var friend in client.Friends)
+                        {
+                            var buff = AppContext.GeUserById(friend);
+                            rez_friends += friend.ToString() + " " + buff.Nickname + " ";
+                        }
+                        rez_friends = rez_friends.TrimEnd();
                     }
-                    else
+                    if (client.FriendsRequests.Count > 0)
                     {
-                        string rez_friends = string.Empty;
-                        string rez_req = string.Empty;
-                        if (client.Friends.Count > 0)
+                        foreach (var req in client.FriendsRequests)
                         {
-                            foreach (var friend in client.Friends)
-                            {
-                                var buff = AppContext.GeUserById(friend);
-                                rez_friends += friend.ToString() + " " + buff.Nickname + " ";
-                            }
-                            rez_friends = rez_friends.TrimEnd();
+                            var buff = AppContext.GeUserById(req);
+                            rez_req += req.ToString() + " " + buff.Nickname + " ";
                         }
-                        if (client.FriendsRequests.Count > 0)
-                        {
-                            foreach (var req in client.FriendsRequests)
-                            {
-                                var buff = AppContext.GeUserById(req);
-                                rez_req += req.ToString() + " " + buff.Nickname + " ";
-                            }
-                            rez_req = rez_req.TrimEnd();
-                        }
-                        socket.Send(new Data(Command.Good_Auth, "Server", data.From, "", client.Id.ToString() + " "
-                            + client.Nickname + " " + client.Friends.Count.ToString() + " " + rez_friends + " "
-                            + client.FriendsRequests.Count.ToString() + " " + rez_req).ToBytes());
+                        rez_req = rez_req.TrimEnd();
                     }
+                    socket.Send(new Data(Command.Good_Auth, "Server", data.From, "", client.Id.ToString() + " "
+                        + client.Nickname + " " + client.Friends.Count.ToString() + " " + rez_friends + " "
+                        + client.FriendsRequests.Count.ToString() + " " + rez_req).ToBytes());
 
                     var state = new ChatHelper.StateObject
                     {
@@ -290,7 +282,7 @@ namespace ConsoleApp1.Domain.Network
                     var secondCallMember = clients.Where(u => u.user.Id.ToString() == data.To).FirstOrDefault();
                     if (secondCallMember == null)
                     {
-                        handlerSocket.Send(new Data(Command.UserNotConnected, "Server", data.From, "", "").ToBytes());
+                        handlerSocket.Send(new Data(Command.UserNotConnected, "Server", data.To, "", "").ToBytes());
                         return;
                     }
                     secondCallMember.Connection.Send(data.ToBytes());
@@ -326,6 +318,14 @@ namespace ConsoleApp1.Domain.Network
                     firstCallMember.Connection.Send(new Data(Command.Cancel_Call, data.From, data.To, data.ClientAddress, "").ToBytes());
                 }
 
+            }
+            else if (data.Command == Command.End_Call)
+            {
+                var firstCallMember = clients.Where(u => u.user.Id.ToString() == data.To).FirstOrDefault();
+                if (firstCallMember != null)
+                {
+                    firstCallMember.Connection.Send(new Data(Command.End_Call, data.From, data.To, data.ClientAddress, "").ToBytes());
+                }
             }
             else if (data.Command == Command.Send_Message)
             {
