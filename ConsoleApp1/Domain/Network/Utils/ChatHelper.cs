@@ -103,7 +103,7 @@ namespace ConsoleApp1.Domain.Network.Utils
         NewFriend,// щоб інший юзер оновив UI
         FriendRequestFailed,// прийшла вірна гуідка але такого юзера немає взагалі
         FriendRequestGood, // додавання реквеста успішна 
-        CloseConnection, // нахуй з з'єднання з серваком
+        CloseConnection, // - з з'єднання з серваком
     }
 
     public class ConnectedClient
